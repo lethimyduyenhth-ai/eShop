@@ -1,0 +1,150 @@
+@page "/checkout"
+@page "/placeorder"
+@rendermode InteractiveServer
+@using eShop_coreBusiness.models
+@using eshop_UseCases.ShoppingCartScreen
+@inject IViewShoppingCartUseCase viewShoppingCartUseCase
+@inject IPlaceOrderUseCase placeOrderUseCase
+@inject NavigationManager navigationManager
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a href="/cart" class="text-decoration-none">Giỏ hàng</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Thanh toán & Đặt hàng</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex align-items-center mb-4">
+        <h2 class="fw-bold text-primary mb-0">📋 Thông Tin Đặt Hàng</h2>
+    </div>
+
+    @if (order != null && order.LineItems != null && order.LineItems.Any())
+    {
+        <EditForm Model="order" OnValidSubmit="HandlePlaceOrder">
+            <DataAnnotationsValidator />
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger shadow-sm mb-4">
+                    ⚠️ @errorMessage
+                </div>
+            }
+
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <div class="card border-0 shadow-sm rounded-3 overflow-hidden p-4">
+                        <h4 class="fw-bold text-dark mb-4 border-bottom pb-2">1. Thông Tin Khách Hàng & Giao Hàng</h4>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Họ và tên người nhận <span class="text-danger">*</span></label>
+                            <InputText class="form-control form-control-lg" @bind-Value="order.CustomerName" placeholder="Nhập đầy đủ họ và tên..." />
+                            <ValidationMessage For="@(() => order.CustomerName)" class="text-danger small mt-1" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Địa chỉ giao hàng <span class="text-danger">*</span></label>
+                            <InputText class="form-control form-control-lg" @bind-Value="order.CustomerAddress" placeholder="Nhập số nhà, tên đường, phường/xã..." />
+                            <ValidationMessage For="@(() => order.CustomerAddress)" class="text-danger small mt-1" />
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Thành phố / Quận <span class="text-danger">*</span></label>
+                                <InputText class="form-control form-control-lg" @bind-Value="order.CustomerCity" placeholder="Ví dụ: Hồ Chí Minh, Hà Nội..." />
+                                <ValidationMessage For="@(() => order.CustomerCity)" class="text-danger small mt-1" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Tỉnh / Thành phố <span class="text-danger">*</span></label>
+                                <InputText class="form-control form-control-lg" @bind-Value="order.CustomerStateProvince" placeholder="Ví dụ: TP. Hồ Chí Minh..." />
+                                <ValidationMessage For="@(() => order.CustomerStateProvince)" class="text-danger small mt-1" />
+                            </div>
+                        </div>
+
+                        <h4 class="fw-bold text-dark mt-4 mb-3 border-bottom pb-2">2. Danh Sách Sản Phẩm Trong Đơn Hàng</h4>
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr class="text-muted small">
+                                        <th>Sản phẩm</th>
+                                        <th class="text-center">Số lượng</th>
+                                        <th class="text-end">Đơn giá</th>
+                                        <th class="text-end">Thành tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in order.LineItems)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <span class="fw-semibold">@(item.Product?.Name ?? $"Sản phẩm #{item.ProductId}")</span>
+                                            </td>
+                                            <td class="text-center">@item.Quantity</td>
+                                            <td class="text-end">@item.Price.ToString("c")</td>
+                                            <td class="text-end fw-bold text-success">@((item.Price * item.Quantity).ToString("c"))</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4">
+                    <OrderSummaryComponent Order="order" HidePlaceOrderButton="true" />
+
+                    <div class="card border-0 shadow-sm rounded-3 p-4 mt-4">
+                        <button type="submit" class="btn btn-success btn-lg w-100 fw-bold py-3 shadow-sm rounded-3">
+                            ✅ Xác Nhận Đặt Hàng
+                        </button>
+                        <a href="/cart" class="btn btn-outline-secondary w-100 fw-semibold mt-2 py-2">
+                            &laquo; Quay lại giỏ hàng
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm text-center py-5 my-3">
+            <div class="card-body">
+                <div class="mb-3" style="font-size: 4rem;">🛒</div>
+                <h4 class="fw-bold text-dark mb-2">Giỏ hàng của bạn đang trống!</h4>
+                <p class="text-muted mb-4">Không thể thực hiện thanh toán khi chưa chọn sản phẩm nào.</p>
+                <a href="/product" class="btn btn-primary btn-lg px-4 fw-bold rounded-3">
+                    Khám phá sản phẩm ngay &raquo;
+                </a>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private Order? order;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        order = await viewShoppingCartUseCase.Execute();
+    }
+
+    private async Task HandlePlaceOrder()
+    {
+        if (order != null)
+        {
+            errorMessage = string.Empty;
+            var orderId = await placeOrderUseCase.Execute(order);
+
+            if (!string.IsNullOrEmpty(orderId))
+            {
+                navigationManager.NavigateTo($"/confirm/{orderId}");
+            }
+            else
+            {
+                errorMessage = "Vui lòng nhập đầy đủ thông tin giao hàng (Họ tên, Địa chỉ, Thành phố, Tỉnh/Thành) trước khi đặt hàng!";
+            }
+        }
+    }
+}

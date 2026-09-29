@@ -1,0 +1,108 @@
+@page "/cart"
+@rendermode InteractiveServer
+@using eShop_coreBusiness.models
+@using eshop_UseCases.ShoppingCartScreen
+@using eshop_UseCases.PluginInterfaces.UI
+@inject IViewShoppingCartUseCase viewShoppingCartUseCase
+@inject IUpdateQuantityUseCase updateQuantityUseCase
+@inject IDeleteProductUseCase deleteProductUseCase
+@inject IShoppingCart shoppingCart
+
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a href="/product" class="text-decoration-none">Sản phẩm</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Giỏ hàng</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex align-items-center mb-4">
+        <h2 class="fw-bold text-primary mb-0 me-3">🛒 Giỏ Hàng Của Bạn</h2>
+        @if (order != null && order.LineItems.Any())
+        {
+            <span class="badge bg-primary rounded-pill fs-6">@order.LineItems.Sum(x => x.Quantity) sản phẩm</span>
+        }
+    </div>
+
+    @if (order != null && order.LineItems.Any())
+    {
+        <div class="row g-4">
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm rounded-3 overflow-hidden p-3 p-md-4">
+                    <div class="d-none d-md-row row border-bottom pb-2 mb-2 text-muted fw-bold small">
+                        <div class="col-md-5">SẢN PHẨM</div>
+                        <div class="col-md-2 text-center">ĐƠN GIÁ</div>
+                        <div class="col-md-3 text-center">SỐ LƯỢNG</div>
+                        <div class="col-md-2 text-end">THÀNH TIỀN</div>
+                    </div>
+
+                    @foreach (var item in order.LineItems)
+                    {
+                        <OrderLineItemComponent LineItem="item" 
+                                               OnQuantityChange="HandleQuantityChange" 
+                                               OnItemDelete="HandleItemDelete" />
+                    }
+
+                    <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                        <a href="/product" class="btn btn-outline-primary fw-semibold">
+                            &laquo; Tiếp tục mua sắm
+                        </a>
+
+                        <button class="btn btn-outline-danger btn-sm" @onclick="HandleEmptyCart">
+                            🗑️ Xóa toàn bộ giỏ hàng
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <OrderSummaryComponent Order="order" />
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card border-0 shadow-sm rounded-3 text-center py-5 my-3">
+            <div class="card-body">
+                <div class="mb-3" style="font-size: 4rem;">🛒</div>
+                <h4 class="fw-bold text-dark mb-2">Giỏ hàng của bạn đang trống!</h4>
+                <p class="text-muted mb-4">Hãy chọn thêm những sản phẩm yêu thích của bạn nhé.</p>
+                <a href="/product" class="btn btn-primary btn-lg px-4 fw-bold rounded-3 shadow-sm">
+                    Khám phá sản phẩm ngay &raquo;
+                </a>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private Order? order;
+
+    protected override async Task OnInitializedAsync()
+    {
+        order = await viewShoppingCartUseCase.Execute();
+    }
+
+    private async Task HandleQuantityChange(OrderLineItem item)
+    {
+        if (order != null)
+        {
+            order = await updateQuantityUseCase.Execute(item.ProductId, item.Quantity);
+        }
+    }
+
+    private async Task HandleItemDelete(OrderLineItem item)
+    {
+        if (order != null)
+        {
+            order = await deleteProductUseCase.Execute(item.ProductId);
+        }
+    }
+
+    private async Task HandleEmptyCart()
+    {
+        await shoppingCart.EmptyAsync();
+        order = await viewShoppingCartUseCase.Execute();
+    }
+}

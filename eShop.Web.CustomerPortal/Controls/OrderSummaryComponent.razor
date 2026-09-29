@@ -1,0 +1,51 @@
+@using eShop_coreBusiness.models
+
+@if (Order != null && Order.LineItems != null)
+{
+    var totalQuantity = Order.LineItems.Sum(x => x.Quantity);
+    var totalPrice = Order.LineItems.Sum(x => x.Price * x.Quantity);
+
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-header bg-primary text-white py-3">
+            <h5 class="card-title mb-0 fw-bold">Tóm Tắt Đơn Hàng</h5>
+        </div>
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between mb-3">
+                <span class="text-muted">Tổng số lượng:</span>
+                <span class="fw-semibold">@totalQuantity sản phẩm</span>
+            </div>
+
+            <div class="d-flex justify-content-between mb-3">
+                <span class="text-muted">Tạm tính:</span>
+                <span class="fw-semibold">@totalPrice.ToString("c")</span>
+            </div>
+
+            <div class="d-flex justify-content-between mb-3">
+                <span class="text-muted">Phí vận chuyển:</span>
+                <span class="text-success fw-semibold">Miễn phí</span>
+            </div>
+
+            <hr class="my-3" />
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <span class="fw-bold fs-5 text-dark">Tổng tiền:</span>
+                <span class="fw-bold fs-4 text-success">@totalPrice.ToString("c")</span>
+            </div>
+
+            @if (!HidePlaceOrderButton)
+            {
+                <a href="/checkout" class="btn btn-success btn-lg w-100 fw-bold rounded-3 shadow-sm py-2">
+                    🛍️ Tiến Hành Đặt Hàng
+                </a>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Order Order { get; set; } = default!;
+
+    [Parameter]
+    public bool HidePlaceOrderButton { get; set; } = false;
+}

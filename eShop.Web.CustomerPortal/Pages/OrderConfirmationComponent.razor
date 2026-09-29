@@ -1,0 +1,102 @@
+@page "/confirm/{orderId:int}"
+@page "/orderconfirm/{orderId:int}"
+@rendermode InteractiveServer
+@using eShop_coreBusiness.models
+@using eshop_UseCases.OrderConfirmationScreen
+@inject IViewOrderConfirmationUseCase viewOrderConfirmationUseCase
+
+<div class="container py-5">
+    @if (order != null)
+    {
+        <div class="row justify-content-center">
+            <div class="col-lg-8 text-center">
+                <div class="mb-4">
+                    <div class="display-1 text-success mb-2">🎉</div>
+                    <h2 class="fw-bold text-success mb-2">Đặt Hàng Thành Công!</h2>
+                    <p class="text-muted fs-5">Cảm ơn bạn đã mua sắm tại <strong>eShop</strong>. Mã đơn hàng của bạn là <strong class="text-primary">#@order.IdOrder</strong>.</p>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-3 text-start p-4 mb-4">
+                    <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">📍 Thông Tin Đơn Hàng</h5>
+                    
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <span class="text-muted d-block small">Người nhận:</span>
+                            <span class="fw-bold">@order.CustomerName</span>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="text-muted d-block small">Ngày đặt:</span>
+                            <span class="fw-bold">@(order.DatePlaced.HasValue ? order.DatePlaced.Value.ToString("dd/MM/yyyy HH:mm") : "Vừa xong")</span>
+                        </div>
+                        <div class="col-12">
+                            <span class="text-muted d-block small">Địa chỉ giao hàng:</span>
+                            <span class="fw-bold">@order.CustomerAddress, @order.CustomerCity, @order.CustomerStateProvince</span>
+                        </div>
+                    </div>
+
+                    <h5 class="fw-bold text-dark border-bottom pb-2 mb-3 mt-4">🛍️ Chi Tiết Sản Phẩm</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr class="text-muted small">
+                                    <th>Sản phẩm</th>
+                                    <th class="text-center">Số lượng</th>
+                                    <th class="text-end">Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in order.LineItems)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="fw-semibold">@(item.Product?.Name ?? $"Sản phẩm #{item.ProductId}")</span>
+                                        </td>
+                                        <td class="text-center">@item.Quantity</td>
+                                        <td class="text-end">@item.Price.ToString("c")</td>
+                                        <td class="text-end fw-bold text-success">@((item.Price * item.Quantity).ToString("c"))</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                        <span class="fw-bold fs-5 text-dark">Tổng cộng:</span>
+                        <span class="fw-bold fs-3 text-success">@order.LineItems.Sum(x => x.Price * x.Quantity).ToString("c")</span>
+                    </div>
+                </div>
+
+                <a href="/product" class="btn btn-primary btn-lg px-5 fw-bold rounded-3 shadow-sm">
+                    &laquo; Tiếp tục mua sắm
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Đang tải thông tin đơn hàng xác nhận...</p>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int OrderId { get; set; }
+
+    private Order? order;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        if (OrderId > 0)
+        {
+            order = viewOrderConfirmationUseCase.Execute(OrderId);
+        }
+    }
+}

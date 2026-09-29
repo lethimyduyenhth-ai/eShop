@@ -1,0 +1,107 @@
+@using eShop_coreBusiness.models
+@using eshop_UseCases.PluginInterfaces
+@inject IProductRepository productRepository
+
+@if (LineItem != null)
+{
+    var product = LineItem.Product ?? (LineItem.ProductId > 0 ? productRepository.GetProduct(LineItem.ProductId) : null);
+    var productName = product?.Name ?? $"Sản phẩm #{LineItem.ProductId}";
+    var imageLink = product?.ImageLink;
+    var brand = product?.Brand;
+
+    <div class="row align-items-center py-3 border-bottom g-3">
+        <div class="col-md-5 d-flex align-items-center">
+            @if (!string.IsNullOrEmpty(imageLink))
+            {
+                <img src="@imageLink" alt="@productName" class="rounded me-3" style="width: 65px; height: 65px; object-fit: contain; background-color: #f8f9fa; padding: 5px;" />
+            }
+            else
+            {
+                <div class="rounded me-3 d-flex align-items-center justify-content-center bg-light text-muted" style="width: 65px; height: 65px; font-size: 1.5rem;">
+                    🛍️
+                </div>
+            }
+            <div>
+                <h6 class="mb-1 fw-bold text-dark">@productName</h6>
+                @if (!string.IsNullOrEmpty(brand))
+                {
+                    <span class="badge bg-secondary me-2">@brand</span>
+                }
+                <span class="badge bg-light text-secondary border">Mã SP: #@LineItem.ProductId</span>
+            </div>
+        </div>
+
+        <div class="col-6 col-md-2 text-md-center">
+            <span class="text-muted d-md-none small">Đơn giá: </span>
+            <span class="fw-semibold text-dark">@LineItem.Price.ToString("c")</span>
+        </div>
+
+        <div class="col-6 col-md-3">
+            <div class="input-group input-group-sm mx-auto" style="max-width: 130px;">
+                <button class="btn btn-outline-secondary" type="button" @onclick="DecreaseQuantity" disabled="@(LineItem.Quantity <= 1)">-</button>
+                <input type="number" class="form-control text-center fw-bold" min="1" value="@LineItem.Quantity" @onchange="OnInputQuantityChange" />
+                <button class="btn btn-outline-secondary" type="button" @onclick="IncreaseQuantity">+</button>
+            </div>
+        </div>
+
+        <div class="col-10 col-md-2 text-md-end">
+            <span class="text-muted d-md-none small">Thành tiền: </span>
+            <span class="fw-bold text-success fs-6">@((LineItem.Price * LineItem.Quantity).ToString("c"))</span>
+        </div>
+
+        <div class="col-2 col-md-1 text-end">
+            <button class="btn btn-outline-danger btn-sm border-0 rounded-circle p-2" title="Xóa sản phẩm" @onclick="DeleteItem">
+                🗑️
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public OrderLineItem LineItem { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<OrderLineItem> OnQuantityChange { get; set; }
+
+    [Parameter]
+    public EventCallback<OrderLineItem> OnItemDelete { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        if (LineItem != null && LineItem.Product == null && LineItem.ProductId > 0)
+        {
+            LineItem.Product = productRepository.GetProduct(LineItem.ProductId);
+        }
+    }
+
+    private async Task IncreaseQuantity()
+    {
+        LineItem.Quantity++;
+        await OnQuantityChange.InvokeAsync(LineItem);
+    }
+
+    private async Task DecreaseQuantity()
+    {
+        if (LineItem.Quantity > 1)
+        {
+            LineItem.Quantity--;
+            await OnQuantityChange.InvokeAsync(LineItem);
+        }
+    }
+
+    private async Task OnInputQuantityChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int qty) && qty > 0)
+        {
+            LineItem.Quantity = qty;
+            await OnQuantityChange.InvokeAsync(LineItem);
+        }
+    }
+
+    private async Task DeleteItem()
+    {
+        await OnItemDelete.InvokeAsync(LineItem);
+    }
+}

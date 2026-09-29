@@ -1,0 +1,203 @@
+@page "/outstandingorders"
+@page "/admin/outstandingorders"
+@page "/admin"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@using eShop_coreBusiness.models
+@using eshop_UseCases.AdminPortalScreen
+@inject IViewOutstandingOrdersUseCase viewOutstandingOrdersUseCase
+@inject IProcessOrderUseCase processOrderUseCase
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+        <div>
+            <h2 class="fw-bold text-primary mb-1">⚙️ Quan Lý Đơn Hàng Chưa Xử Lý</h2>
+            <p class="text-muted mb-0">Danh sách các đơn hàng mới chờ quản trị viên xác nhận và đóng gói</p>
+        </div>
+        <div>
+            @if (outstandingOrders != null)
+            {
+                <span class="badge bg-warning text-dark px-3 py-2 fs-6 shadow-sm">
+                    Chờ xử lý: <strong>@outstandingOrders.Count()</strong> đơn hàng
+                </span>
+            }
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm mb-4" role="alert">
+            ✅ @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+        </div>
+    }
+
+    @if (outstandingOrders != null && outstandingOrders.Any())
+    {
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr class="text-muted small">
+                            <th class="py-3 ps-4">MÃ ĐƠN</th>
+                            <th class="py-3">KHÁCH HÀNG</th>
+                            <th class="py-3">NGÀY ĐẶT</th>
+                            <th class="py-3">ĐỊA CHỈ GIAO HÀNG</th>
+                            <th class="py-3 text-center">SỐ SẢN PHẨM</th>
+                            <th class="py-3 text-end">TỔNG TIỀN</th>
+                            <th class="py-3 text-center pe-4">THAO TÁC</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in outstandingOrders)
+                        {
+                            <tr>
+                                <td class="ps-4">
+                                    <span class="fw-bold text-primary">#@order.IdOrder</span>
+                                </td>
+                                <td>
+                                    <span class="fw-semibold text-dark">@order.CustomerName</span>
+                                </td>
+                                <td class="text-muted small">
+                                    @(order.DatePlaced.HasValue ? order.DatePlaced.Value.ToString("dd/MM/yyyy HH:mm") : "-")
+                                </td>
+                                <td class="small">
+                                    @order.CustomerAddress, @order.CustomerCity, @order.CustomerStateProvince
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-info text-dark rounded-pill">
+                                        @order.LineItems.Sum(x => x.Quantity)
+                                    </span>
+                                </td>
+                                <td class="text-end fw-bold text-success">
+                                    @order.LineItems.Sum(x => x.Price * x.Quantity).ToString("c")
+                                </td>
+                                <td class="text-center pe-4">
+                                    <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => SelectOrder(order)">
+                                        👁️ Xem chi tiết
+                                    </button>
+                                    <button class="btn btn-sm btn-success fw-semibold" @onclick="() => HandleProcessOrder(order.IdOrder.GetValueOrDefault())">
+                                        ✅ Đánh dấu Đã xử lý
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else if (outstandingOrders != null && !outstandingOrders.Any())
+    {
+        <div class="card border-0 shadow-sm text-center py-5 my-3">
+            <div class="card-body">
+                <div class="mb-3" style="font-size: 4rem;">🎉</div>
+                <h4 class="fw-bold text-dark mb-2">Không có đơn hàng nào chờ xử lý!</h4>
+                <p class="text-muted">Tất cả các đơn hàng đã được quản trị viên xử lý hoàn tất.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Đang nạp danh sách đơn hàng chờ xử lý...</p>
+        </div>
+    }
+</div>
+
+@if (selectedOrder != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-3">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-header-title mb-0 fw-bold">Chi Tiết Đơn Hàng #@selectedOrder.IdOrder</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => selectedOrder = null"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <span class="text-muted small d-block">Khách hàng:</span>
+                            <span class="fw-bold fs-6">@selectedOrder.CustomerName</span>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="text-muted small d-block">Ngày đặt:</span>
+                            <span class="fw-bold">@(selectedOrder.DatePlaced.HasValue ? selectedOrder.DatePlaced.Value.ToString("dd/MM/yyyy HH:mm") : "-")</span>
+                        </div>
+                        <div class="col-12">
+                            <span class="text-muted small d-block">Địa chỉ giao hàng:</span>
+                            <span class="fw-bold">@selectedOrder.CustomerAddress, @selectedOrder.CustomerCity, @selectedOrder.CustomerStateProvince</span>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold text-dark mb-3 border-bottom pb-2">Danh sách món hàng:</h6>
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr class="text-muted small">
+                                    <th>Sản phẩm</th>
+                                    <th class="text-center">Số lượng</th>
+                                    <th class="text-end">Đơn giá</th>
+                                    <th class="text-end">Thành tiền</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in selectedOrder.LineItems)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@(item.Product?.Name ?? $"Sản phẩm #{item.ProductId}")</td>
+                                        <td class="text-center">@item.Quantity</td>
+                                        <td class="text-end">@item.Price.ToString("c")</td>
+                                        <td class="text-end fw-bold text-success">@((item.Price * item.Quantity).ToString("c"))</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="() => selectedOrder = null">Đóng</button>
+                    <button type="button" class="btn btn-success fw-bold" @onclick="() => HandleProcessOrder(selectedOrder.IdOrder.GetValueOrDefault())">
+                        ✅ Xác nhận xử lý đơn hàng này
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private IEnumerable<Order>? outstandingOrders;
+    private Order? selectedOrder;
+    private string successMessage = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        LoadOrders();
+    }
+
+    private void LoadOrders()
+    {
+        outstandingOrders = viewOutstandingOrdersUseCase.Execute();
+    }
+
+    private void SelectOrder(Order order)
+    {
+        selectedOrder = order;
+    }
+
+    private void HandleProcessOrder(int orderId)
+    {
+        var result = processOrderUseCase.Execute(orderId, "admin");
+        if (result)
+        {
+            successMessage = $"Đơn hàng #{orderId} đã được đánh dấu xử lý thành công!";
+            selectedOrder = null;
+            LoadOrders();
+        }
+    }
+}

@@ -1,0 +1,43 @@
+@using Microsoft.AspNetCore.Components.Authorization
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(Program).Assembly"
+            AdditionalAssemblies="new[] { 
+                typeof(eShop.Web.CustomerPortal.Pages.ViewProductComponent).Assembly,
+                typeof(eShop.Web.AdminPortal.OutstandingOrdersComponent).Assembly
+            }">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    <div class="container py-5 text-center">
+                        <div class="card border-0 shadow-sm mx-auto" style="max-width: 500px;">
+                            <div class="card-body p-4">
+                                <div class="mb-3" style="font-size: 3rem;">🔒</div>
+                                <h4 class="fw-bold text-danger mb-2">Quyền truy cập bị từ chối</h4>
+                                <p class="text-muted mb-4">Bạn cần đăng nhập tài khoản Quản trị viên (Admin) để xem trang này.</p>
+                                <a href="/login" class="btn btn-primary fw-bold px-4">🔑 Đăng nhập Admin</a>
+                            </div>
+                        </div>
+                    </div>
+                </NotAuthorized>
+                <Authorizing>
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Đang kiểm tra quyền truy cập...</p>
+                    </div>
+                </Authorizing>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <LayoutView Layout="typeof(Layout.MainLayout)">
+                <div class="container py-5 text-center">
+                    <h3 class="fw-bold">404 - Không tìm thấy trang</h3>
+                    <a href="/" class="btn btn-primary mt-3">Quay lại Trang chủ</a>
+                </div>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

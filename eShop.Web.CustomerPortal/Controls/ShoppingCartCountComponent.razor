@@ -1,0 +1,53 @@
+@using eshop_UseCases.PluginInterfaces.UI
+@using eShop_coreBusiness.models
+@inject IShoppingCart shoppingCart
+@implements IDisposable
+
+<a href="/cart" class="btn btn-outline-primary position-relative d-inline-flex align-items-center gap-2 px-3 py-2 rounded-pill shadow-sm text-decoration-none">
+    <span class="fs-5">🛒</span>
+    <span class="fw-bold">Giỏ hàng</span>
+    @if (cartCount > 0)
+    {
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light shadow">
+            @cartCount
+            <span class="visually-hidden">sản phẩm</span>
+        </span>
+    }
+</a>
+
+@code {
+    private int cartCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        shoppingCart.OnChange += OnCartStateChanged;
+        await UpdateCartCountAsync();
+    }
+
+    private void OnCartStateChanged()
+    {
+        InvokeAsync(async () =>
+        {
+            await UpdateCartCountAsync();
+            StateHasChanged();
+        });
+    }
+
+    private async Task UpdateCartCountAsync()
+    {
+        var order = await shoppingCart.GetOrderAsync();
+        if (order != null && order.LineItems != null)
+        {
+            cartCount = order.LineItems.Sum(x => x.Quantity);
+        }
+        else
+        {
+            cartCount = 0;
+        }
+    }
+
+    public void Dispose()
+    {
+        shoppingCart.OnChange -= OnCartStateChanged;
+    }
+}
